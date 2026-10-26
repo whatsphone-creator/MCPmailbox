@@ -1,0 +1,8 @@
+# ~/.codex/config.toml
+# 先 export MAILBOX_TOKEN_CODEX，再：
+#   codex mcp add mcpmailbox --url http://127.0.0.1:8765/mcp --bearer-token-env-var MAILBOX_TOKEN_CODEX
+
+[mcp_servers.mcpmailbox]
+url = "http://127.0.0.1:8765/mcp"
+bearer_token_env_var = "MAILBOX_TOKEN_CODEX"
+enabled = true

@@ -1,0 +1,26 @@
+[project]
+name = "mcpmailbox"
+version = "0.1.0"
+description = "P0 MCP mailbox shared by Grok Bot, Codex, and Claude Code."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=2.3.0,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+mcpmailbox = "mcpmailbox.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

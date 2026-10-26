@@ -1,0 +1,8 @@
+{
+  "name": "mcpmailbox",
+  "url": "https://YOUR_HOST/mcp",
+  "transport": "streamable-http",
+  "headers": {
+    "Authorization": "Bearer dev-token-grok"
+  }
+}
