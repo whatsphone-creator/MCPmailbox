@@ -11,6 +11,13 @@ def test_image_url_attachment() -> None:
     assert stored == [{"type": "image", "url": "https://example.com/a.png"}]
 
 
+def test_url_attachment_is_stored_without_fetch_or_size_check() -> None:
+    # Unreachable host and a long path. Accepted because only the string is stored.
+    url = "http://127.0.0.1:9/" + ("x" * 400) + ".png"
+    stored = normalize_attachments([{"type": "image", "url": url}])
+    assert stored == [{"type": "image", "url": url}]
+
+
 def test_rejects_oversize_inline_image() -> None:
     payload = base64.b64encode(b"x" * (MAX_ATTACHMENT_BYTES + 1)).decode()
     with pytest.raises(MailboxError, match="2MB"):

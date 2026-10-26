@@ -172,6 +172,31 @@ def test_sender_cannot_ack_and_stranger_cannot_read(mailbox_url: str) -> None:
     assert all(item["id"] != message_id for item in listed["messages"])
 
 
+def test_extra_cc_is_ignored_and_url_is_not_fetched(mailbox_url: str) -> None:
+    url = "http://127.0.0.1:9/not-fetched.png"
+    failed, posted = asyncio.run(
+        _call(
+            mailbox_url,
+            TOKEN_A,
+            "mailbox_post",
+            {
+                "to": [AGENT_B],
+                "cc": ["claude-code-workspace"],
+                "text": "cc is not a parameter",
+                "attachments": [{"type": "image", "url": url}],
+            },
+        )
+    )
+    assert failed is False
+    assert isinstance(posted, dict)
+    assert posted["cc"] == []
+    assert posted["attachments"] == [{"type": "image", "url": url}]
+    visible_error, visible = asyncio.run(_call(mailbox_url, TOKEN_C, "mailbox_list", {"status": "pending"}))
+    assert visible_error is False
+    assert isinstance(visible, dict)
+    assert all(item["id"] != posted["id"] for item in visible["messages"])
+
+
 def test_inline_image_over_two_megabytes_is_rejected(mailbox_url: str) -> None:
     payload = base64.b64encode(b"y" * (MAX_ATTACHMENT_BYTES + 1)).decode()
     failed, text = asyncio.run(

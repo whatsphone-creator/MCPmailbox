@@ -17,7 +17,7 @@
 
 `{"type":"image","data_base64":"...","mime":"image/png"}`
 
-最多 4 個，inline 每個最多 2MB。不要把檔案 URL 指到本機路徑。
+最多 4 個。inline `data_base64` 解碼後每個最多 2MB。URL 只存網址字串：伺服器不抓取，也不檢查遠端檔案是否 ≤2MB。不要把檔案 URL 指到本機路徑。`mailbox_post` 沒有 `cc` 參數；多送的 `cc` 會被略過且不報錯，寫入固定 `[]`。
 
 ## 工作階段結束
 

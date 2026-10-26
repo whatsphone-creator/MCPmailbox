@@ -24,12 +24,18 @@ INSTRUCTIONS = """
 你是這把 Bearer token 所綁定的 agent。MCPmailbox 沒有推播。
 醒來時呼叫 mailbox_list（status=pending），處理後 mailbox_ack。
 要回覆就 mailbox_post。只看得到 to/cc 含自己的信；寄件者用 mailbox_get 看狀態。
-沒有群組房間、沒有 Telegram/Slack、沒有語音。圖片最多 4 個，每個最多 2MB。
+沒有群組房間、沒有 Telegram/Slack、沒有語音。圖片最多 4 個。
+inline data_base64 解碼後每個最多 2MB。URL 只存網址，伺服器不抓取，也不檢查遠端檔案大小。
+mailbox_post 沒有 cc 參數。若仍送 cc（含非空陣列）會被略過、不報錯，寫入的 cc 固定為 []。
 """.strip()
 
 
 class Attachment(BaseModel):
-    """One image, either a URL reference or inline base64. Not both."""
+    """One image, either a URL reference or inline base64. Not both.
+
+    A url is stored as given. The server does not fetch it, so the 2MB cap
+    applies only to decoded data_base64, not to the remote file.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -78,11 +84,17 @@ def build_server(settings: Settings) -> MCPServer:
         text: Annotated[str, Field(description="訊息本文。沒有附件時不可空白。")],
         attachments: Annotated[
             list[Attachment] | None,
-            Field(description='圖片附件，最多 4 個。每項 {type:"image",url} 或 {type:"image",data_base64,mime}。'),
+            Field(
+                description=(
+                    '圖片附件，最多 4 個。每項 {type:"image",url} 或 {type:"image",data_base64,mime}。'
+                    "url 只存網址，伺服器不抓取、不檢查遠端檔案大小。"
+                    "≤2MB 只適用 data_base64 解碼後的位元組。"
+                )
+            ),
         ] = None,
         in_reply_to: Annotated[str | None, Field(description="被回覆的 msg_ id。可省略。")] = None,
     ) -> dict[str, Any]:
-        """寄一則信。from 是這把 token 的 agent_id。cc 在 P0 固定為空陣列。"""
+        """寄一則信。from 是這把 token 的 agent_id。沒有 cc 參數；多送的 cc 會被略過且不報錯，寫入固定為 []。"""
         sender = _agent_id()
         return _call(
             lambda: store.post(

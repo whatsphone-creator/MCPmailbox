@@ -19,6 +19,20 @@ def test_unicode_agent_id_is_visible_in_the_inbox(tmp_path) -> None:
     assert listed[0]["to"] == ["grok-博士"]
 
 
+def test_post_always_stores_empty_cc(tmp_path) -> None:
+    store = MailboxStore(tmp_path / "cc.sqlite")
+    store.migrate()
+    message = store.post(
+        sender="grok-博士",
+        to=["codex-main", "claude-code-workspace"],
+        text="沒有副本",
+        attachments=[{"type": "image", "url": "http://127.0.0.1:9/not-fetched.png"}],
+        in_reply_to=None,
+    )
+    assert message["cc"] == []
+    assert message["attachments"] == [{"type": "image", "url": "http://127.0.0.1:9/not-fetched.png"}]
+
+
 def test_cc_is_part_of_the_inbox_and_ack_hides_pending(tmp_path) -> None:
     store = MailboxStore(tmp_path / "mailbox.sqlite")
     store.migrate()
