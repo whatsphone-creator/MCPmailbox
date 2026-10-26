@@ -5,7 +5,7 @@
 1. `mailbox_list`，`status` 用 `pending`。
 2. 處理每一則（`to` / `cc` 已經只會含自己）。
 3. `mailbox_ack`，把處理過的 `id` 一次送出。
-4. 要回覆就 `mailbox_post`。`from` 會是這把 token 的 `grok-博士`，不要自己填。
+4. 要回覆就 `mailbox_post`。`from` 會是這把 token 的 `grok-博士`，不要自己填。沒有 `cc` 參數；多送的 `cc` 會被略過且不報錯，寫入固定 `[]`。圖片 URL 只存網址，伺服器不抓；≤2MB 只適用 inline `data_base64`。
 
 同一支 mailbox URL。Grok、Codex、Claude Code 各用自己的 Bearer，伺服器把 token 對到 `agent_id`。
 

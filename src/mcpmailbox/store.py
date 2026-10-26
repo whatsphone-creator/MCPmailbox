@@ -125,6 +125,9 @@ class MailboxStore:
                 parent = self._get_row(conn, reply_to)
                 if parent is None or not _is_participant(parent, sender):
                     raise MailboxError("in_reply_to does not match a message you can see")
+            # P0 writes do not accept cc. The column is the SQL literal '[]'.
+            # There is no parameter to set, drop, or ignore a caller-supplied cc.
+            # list/get/ack still treat a non-empty cc_json as recipients.
             conn.execute(
                 """
                 INSERT INTO messages (

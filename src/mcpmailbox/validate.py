@@ -9,6 +9,8 @@ from urllib.parse import urlsplit
 
 from mcpmailbox.errors import MailboxError
 
+# Decoded-byte cap for inline data_base64 only. URL attachments are stored as
+# strings and are not fetched, so this limit is not applied to them.
 MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024
 MAX_ATTACHMENTS = 4
 MAX_TEXT_CHARS = 100_000
@@ -68,6 +70,7 @@ def _attachment_dict(item: Any) -> dict[str, Any]:
 
 
 def _normalize_url(url: str) -> str:
+    """Accept an http(s) URL string. Do not fetch it and do not size-check a remote file."""
     if not isinstance(url, str) or len(url) > MAX_URL_CHARS or any(ch.isspace() for ch in url):
         raise MailboxError("attachment url must be an http(s) URL of at most 2048 characters")
     parsed = urlsplit(url)
@@ -97,7 +100,12 @@ def _normalize_inline(data_base64: str, mime: str | None) -> dict[str, str]:
 
 
 def normalize_attachments(attachments: list[Any] | None) -> list[dict[str, Any]]:
-    """Return the stored attachment list. URL files are references and are not downloaded."""
+    """Return the stored attachment list.
+
+    URL attachments are references only. The server does not fetch them, and
+    the 2MB limit is not applied by downloading. That cap is the decoded size
+    of inline data_base64 payloads.
+    """
     if attachments is None:
         return []
     if not isinstance(attachments, list):

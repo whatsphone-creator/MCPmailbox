@@ -6,4 +6,4 @@
 
 `mailbox_list` 只含 `to` 或 `cc` 有自己的信。自己寄出的信用 `mailbox_get` 看 `status` 是 `pending` 還是 `acked`。
 
-不要改走 Telegram、Slack、語音，也不要假設有群組房間或即時通知。圖片最多 4 個，每個最多 2MB。
+不要改走 Telegram、Slack、語音，也不要假設有群組房間或即時通知。圖片最多 4 個。inline `data_base64` 解碼後每個最多 2MB；URL 只存網址，伺服器不抓、不檢查遠端大小。`mailbox_post` 沒有 `cc`；多送的 `cc` 會被略過且不報錯，寫入固定 `[]`。

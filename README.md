@@ -35,12 +35,12 @@ Claude Code Bearer → claude-code-workspace ────┘
 
 `attachments` 兩種寫法，二選一：
 
-- `[{ "type": "image", "url": "https://…" }]`
-- `[{ "type": "image", "data_base64": "…", "mime": "image/png" }]`
+- `[{ "type": "image", "url": "https://…" }]` — 只存這條 URL 字串。伺服器不去抓、不解析內容、不下載，所以也不會用下載結果檢查檔案大小。
+- `[{ "type": "image", "data_base64": "…", "mime": "image/png" }]` — inline。解碼後的位元組必須 ≤ 2MB。
 
-每個檔案最多 2MB，一則最多 4 個。`mime` 只接受 `image/png`、`image/jpeg`、`image/gif`、`image/webp`。`id` 形如 `msg_` 加 32 位 hex。`created_at` 是 UTC，例如 `2026-10-27T00:00:00.000000Z`。
+一則最多 4 個附件。**≤2MB 只適用 inline 的 `data_base64`（base64 解碼之後）**。URL 附件不做抓取，因此不做遠端檔案大小檢查；限制的是 URL 字串本身：最長 2048，而且必須是沒有帳密的 `http` 或 `https`。`mime` 只給 inline，只接受 `image/png`、`image/jpeg`、`image/gif`、`image/webp`。`id` 形如 `msg_` 加 32 位 hex。`created_at` 是 UTC，例如 `2026-10-27T00:00:00.000000Z`。
 
-`mailbox_post` 不收 `cc`，P0 寫入時 `cc` 固定 `[]`。列表仍然把 `cc` 算進收件匣，所以規格裡的欄位有在查詢路徑上。
+寫入時 `cc` 固定是 `[]`。`mailbox_post` 的參數沒有 `cc`。呼叫端若仍送 `cc`（包括非空陣列），工具參數模型會把它當成未知欄位略過，不報錯、也不寫入；這是略過，不是先收下再改掉。`MailboxStore.post` 本身不讀 `cc`，插入時把 `cc_json` 寫成 SQL 字面值 `'[]'`。讀取路徑仍然認得這個欄位。`mailbox_list`、`mailbox_get`、`mailbox_ack` 會把 `cc` 裡的 agent 當收件者。P0 的寫入不會產生非空 `cc`；某一列若已經有非空 `cc`（例如直接改資料庫），查詢與 ack 仍會把它算進去。
 
 對方 `mailbox_ack` 之後 `status` 變成 `acked`，`meta` 會多 `acked_by` 和 `acked_at`。信還在，只是不再算 pending。
 
@@ -48,7 +48,7 @@ Claude Code Bearer → claude-code-workspace ────┘
 
 | 工具 | 參數 | 行為 |
 | --- | --- | --- |
-| `mailbox_post` | `to[]`, `text`, `attachments?`, `in_reply_to?` | 寄一則。`from` 是 token 的 agent。回傳整則訊息。 |
+| `mailbox_post` | `to[]`, `text`, `attachments?`, `in_reply_to?` | 寄一則。`from` 是 token 的 agent。沒有 `cc` 參數；多送的 `cc` 會被略過且不報錯，存檔的 `cc` 永遠是 `[]`。回傳整則訊息。 |
 | `mailbox_list` | `status?=pending`, `limit?=20` | 只列出 `to` 或 `cc` 含自己的信。`pending` 排除已 ack；`acked` 只留已 ack。`limit` 1–100，預設 20。 |
 | `mailbox_ack` | `id[]` | 收件者把這些 id 標成 `acked`。寄件者不在 `to`/`cc` 就不能 ack。 |
 | `mailbox_get` | `id` | 讀一則自己參與的信（寄件者、`to` 或 `cc`）。寄件者用它看還是不是 pending。 |
@@ -62,8 +62,8 @@ Claude Code Bearer → claude-code-workspace ────┘
 - 比對 token 用固定時間比較，日誌不記 token，也不記本文。
 - `mailbox_list` 只看自己的收件匣。`mailbox_get` 只給參與者。其他人拿到 id 也只會看到找不到。
 - `mailbox_ack` 只給 `to` / `cc` 裡的人。寄件者不能代收。
-- URL 附件只存網址，伺服器不去抓。這樣不會替呼叫端去打內網。2MB 上限加在 inline 的解碼後大小；URL 最長 2048，而且必須是沒有帳密的 `http` 或 `https`。
-- HTTP body 上限 16MB，所以四張剛好 2MB 的 inline 圖放得下。再大就在進工具前被拒絕。
+- URL 附件只存網址字串。伺服器不去抓、不下載、不依內容檢查大小，所以不會替呼叫端打內網，也不會把「遠端檔案是否 ≤2MB」當成驗證。≤2MB 只加在 inline `data_base64` 解碼後的位元組。URL 最長 2048，而且必須是沒有帳密的 `http` 或 `https`。
+- HTTP body 上限 16MB，所以四張剛好 2MB 的 inline 圖放得下。再大就在進工具前被拒絕。這道上限看的是請求本文，不是去抓 URL。
 - 預設只聽 `127.0.0.1`。Grok Bot 要公開的 HTTPS URL 時，自己在前面加 TLS；這個 scaffold 不部署。
 - SDK 會掛一份 protected-resource metadata，`issuer` 寫成 `https://mcpmailbox.local`。那裡沒有登入伺服器。P0 不要走 OAuth。Client id / secret 留空，每次請求帶 `Authorization: Bearer <token>`。
 - SQLite 檔裡有本文和 inline 圖片。檔案權限跟著執行者。
@@ -183,4 +183,4 @@ claude mcp add --transport http mcpmailbox http://127.0.0.1:8765/mcp \
 
 ## P0 不做
 
-即時推播、Telegram、Slack、語音、超過 2MB 的附件、群組房間。也不在這份 scaffold 裡部署或合併。
+即時推播、Telegram、Slack、語音、超過 2MB 的 inline（`data_base64`）附件、由伺服器抓取 URL 附件、群組房間，以及在 `mailbox_post` 寫入非空 `cc`。也不在這份 scaffold 裡部署或合併。
